@@ -1,0 +1,107 @@
+---
+doc_id: "mlflow/docs/docs/genai/eval-monitor/scorers/llm-judge/tool-call/index"
+source_path: "mlflow/docs/docs/genai/eval-monitor/scorers/llm-judge/tool-call/index.mdx"
+title: "Tool Call Evaluation with Built-in Judges"
+description: "Evaluate AI agent tool calling with MLflow built-in judges for tool call correctness and efficiency assessment."
+---
+
+# Tool Call Evaluation with Built-in Judges
+
+AI agents often use tools (functions) to complete tasks - from fetching data to performing calculations. Evaluating tool-calling applications requires assessing whether agents select appropriate tools and provide correct arguments to fulfill user requests.
+
+MLflow provides built-in judges designed specifically for evaluating tool-calling agents:
+
+## Available Tool Call Judges
+
+| Judge                                                                              | What does it evaluate?                                       | Requires ground-truth? | Requires traces?      |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------- | --------------------- |
+| [ToolCallCorrectness](/genai/eval-monitor/scorers/llm-judge/tool-call/correctness) | Are the tool calls and arguments correct for the user query? | No                     | ⚠️ **Trace Required** |
+| [ToolCallEfficiency](/genai/eval-monitor/scorers/llm-judge/tool-call/efficiency)   | Are the tool calls efficient without redundancy?             | No                     | ⚠️ **Trace Required** |
+
+**Tip**
+All tool call judges require MLflow Traces with at least one span marked as `span_type="TOOL"`. Use the @mlflow.trace decorator with `span_type="TOOL"` on your tool functions.
+
+## Complete Agent Example
+
+Here's a complete example showing how to build a tool-calling agent and evaluate it with the judges:
+
+```python
+import json
+import mlflow
+import openai
+from mlflow.genai.scorers import ToolCallCorrectness, ToolCallEfficiency
+
+mlflow.openai.autolog()
+client = openai.OpenAI()
+
+# Define the tool schema for the LLM
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string", "description": "City and country"},
+                },
+                "required": ["location"],
+            },
+        },
+    },
+]
+
+
+# Define the tool function with proper span type
+@mlflow.trace(span_type="TOOL")
+def get_weather(location: str) -> dict:
+    # Simulated weather data - in practice, this would call a weather API
+    return {"temperature": 72, "condition": "sunny", "location": location}
+
+
+# Define your agent
+@mlflow.trace
+def agent(query: str):
+    # Call the LLM with tools
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": query}],
+        tools=tools,
+    )
+    message = response.choices[0].message
+    responses = []
+    if message.tool_calls:
+        for tool_call in message.tool_calls:
+            args = json.loads(tool_call.function.arguments)
+            result = get_weather(**args)
+            responses.append({
+                "response": f"Weather in {result['location']}: {result['condition']}, {result['temperature']}°F"
+            })
+
+    return {"response": responses if responses else message.content}
+
+
+# Create evaluation dataset
+eval_dataset = [
+    {"inputs": {"query": "What's the weather like in Paris?"}},
+    {"inputs": {"query": "How's the weather in Tokyo?"}},
+]
+
+# Run evaluation with tool call judges
+eval_results = mlflow.genai.evaluate(
+    data=eval_dataset,
+    predict_fn=agent,
+    scorers=[
+        ToolCallCorrectness(model="openai:/gpt-4o-mini"),
+        ToolCallEfficiency(model="openai:/gpt-4o-mini"),
+    ],
+)
+```
+
+### Understanding the Results
+
+Each tool call judge evaluates tool spans separately:
+
+- **ToolCallCorrectness**: Assesses whether the agent selected appropriate tools and provided correct arguments
+- **ToolCallEfficiency**: Evaluates whether the agent made redundant or unnecessary tool calls

@@ -1,0 +1,75 @@
+---
+doc_id: "mlflow/docs/docs/genai/tracing/collect-user-feedback/index"
+source_path: "mlflow/docs/docs/genai/tracing/collect-user-feedback/index.mdx"
+title: "Collect User Feedback"
+description: "Collect and store structured user feedback on MLflow traces to evaluate LLM application quality."
+---
+
+# Collect User Feedback
+
+Capturing user feedback is critical for understanding the real-world quality of your LLM application or AI agent. MLflow's Feedback API provides a structured, standardized approach to collecting, storing, and analyzing user feedback directly within your traces.
+
+## Adding Feedback with API
+
+To annotate traces with feedback programmatically, use the `mlflow.log_feedback` API.
+
+```python
+import mlflow
+from mlflow.entities import AssessmentSource, AssessmentSourceType
+
+mlflow.log_feedback(
+    trace_id="<your trace id>",
+    name="user_satisfaction",
+    value=True,
+    rationale="User indicated response was helpful",
+    source=AssessmentSource(source_type=AssessmentSourceType.HUMAN, source_id="user_123"),
+)
+```
+
+If you have a `Feedback` object already (e.g., a response from LLM-as-a-Judge), you can log it
+directly using the `mlflow.log_assessment` API. This is equivalent to using the
+
+`mlflow.log_feedback` API with unpacked fields.
+
+```python
+import mlflow
+from mlflow.genai.judges import make_judge
+from typing import Literal
+
+coherence_judge = make_judge(
+    name="coherence",
+    instructions=(
+        "Evaluate if the response is coherent, maintaining a constant tone "
+        "and following a clear flow of thoughts/concepts"
+        "Trace: {{ trace }}\n"
+    ),
+    feedback_value_type=Literal["coherent", "somewhat coherent", "incoherent"],
+    model="anthropic:/claude-opus-4-1-20250805",
+)
+
+trace = mlflow.get_trace("<your trace id>")
+feedback = coherence_judge(trace=trace)
+
+mlflow.log_assessment(trace_id="<your trace id>", assessment=feedback)
+# Equivalent to log_feedback(trace_id="<trace_id>", name=feedback.name, value=feedback.value, ...)"
+```
+
+## Supported Value Types
+
+MLflow feedback supports various formats to match your application's needs:
+
+| Feedback Type | Description                    | Example Use Cases                   |
+| ------------- | ------------------------------ | ----------------------------------- |
+| **Boolean**   | Simple `True`/`False` feedback | Thumbs up/down, correct/incorrect   |
+| **Numeric**   | Integer or float ratings       | 1-5 star ratings, confidence scores |
+| **Text**      | Free-form text feedback        | Detailed quality breakdowns         |
+
+## Supported Feedback Sources
+
+The `source` field of the feedback provides information about where the feedback came from.
+
+| Source Type   | Description           | Example Use Cases                        |
+| ------------- | --------------------- | ---------------------------------------- |
+| **HUMAN**     | Human feedback        | User thumbs up/down, correct/incorrect   |
+| **LLM_JUDGE** | LLM-based feedback    | Score traces with an LLM-based judge     |
+| **CODE**      | Programmatic feedback | Score traces with a programmatic checker |

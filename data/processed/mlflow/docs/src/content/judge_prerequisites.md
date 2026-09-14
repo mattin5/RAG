@@ -1,0 +1,35 @@
+---
+doc_id: "mlflow/docs/src/content/judge_prerequisites"
+source_path: "mlflow/docs/src/content/judge_prerequisites.mdx"
+title: "judge_prerequisites"
+---
+
+## Prerequisites for running the examples
+
+1. Install MLflow and required packages
+
+   ```bash
+   pip install --upgrade mlflow
+   ```
+
+2. Create an MLflow experiment by following the [setup your environment quickstart](/genai/getting-started/connect-environment/).
+
+3. (Optional, if using OpenAI models) Use the native OpenAI SDK to connect to OpenAI-hosted models. Select a model from the [available OpenAI models](https://platform.openai.com/docs/models).
+
+   ```python
+   import mlflow
+   import os
+   import openai
+
+   # Ensure your OPENAI_API_KEY is set in your environment
+   # os.environ["OPENAI_API_KEY"] = "<YOUR_API_KEY>" # Uncomment and set if not globally configured
+
+   # Enable auto-tracing for OpenAI
+   mlflow.openai.autolog()
+
+   # Create an OpenAI client
+   client = openai.OpenAI()
+
+   # Select an LLM
+   model_name = "gpt-4o-mini"
+   ```

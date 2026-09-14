@@ -14,10 +14,9 @@ MAX_TRIES = 5
 
 for attempt in range(MAX_TRIES):
     try:
-        response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents="Quiero usar la API de genai para hacerle unos prompts con una extructura base, y le quiero añadir un output de una funcion que he usado yo. Cómo mandarías ese prompt"    
-        )
+        for m in client.models.list():
+            if "generateContent" in m.supported_actions:
+                print(m.name)    
         break
     except Exception as e:
         if '503' in str(e):

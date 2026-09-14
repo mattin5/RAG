@@ -1,0 +1,108 @@
+---
+doc_id: "mlflow/docs/docs/genai/tracing/index"
+source_path: "mlflow/docs/docs/genai/tracing/index.mdx"
+title: "LLM Tracing and Agent Observability"
+description: "Trace every step of your agent and LLM application with MLflow's OpenTelemetry-compatible observability. Capture inputs, outputs, latency, and costs."
+---
+
+# MLflow Tracing for LLM and Agent Observability
+
+MLflow Tracing is a fully **OpenTelemetry-compatible** [LLM observability](https://mlflow.org/ai-observability) solution for your agents and LLM applications. It captures the inputs, outputs, and metadata associated with each intermediate step of a request, enabling you to easily pinpoint the source of bugs and unexpected behaviors.
+
+## LLM and Agent Tracing Use Cases
+
+MLflow Tracing gives you complete visibility into your agents and LLM applications. Here's how it helps you at each step of agent development, click on the tabs below to learn more:
+
+**Build & Debug**
+
+#### Debug Issues in Your IDE or Notebook
+
+Traces provide deep insights into what happens beneath the abstractions of LLM and AI agent frameworks, helping you precisely identify where issues occur.
+
+You can navigate traces seamlessly within your preferred IDE, notebook, or the MLflow UI, eliminating the hassle of switching between multiple tabs or searching through an overwhelming list of traces.
+
+[Learn more →](/genai/tracing/observe-with-traces/ui)
+
+![Trace Debugging](/images/llms/tracing/genai-trace-debug.png)
+
+**Human Feedback**
+
+#### Track Annotation and Human Feedback
+
+Human feedback is essential for building high-quality LLM applications and AI agents that meet user expectations. MLflow supports collecting, managing, and utilizing feedback from end-users and domain experts.
+
+Feedback are attached to traces and recorded with metadata, including user, timestamp, revisions, etc.
+
+[Learn more →](/genai/assessments/feedback)
+
+![Trace Feedback](/images/llms/tracing/genai-human-feedback.png)
+
+**Evaluation**
+
+#### Evaluate and Enhance Quality
+
+Systematically assessing and improving the quality of LLM applications and AI agents is a challenge. Combined with [MLflow Evaluation](/genai/eval-monitor), MLflow offers a seamless experience for evaluating your applications.
+
+Tracing helps by allowing you to track quality assessment and inspect the evaluation results with visibility into the internals of the system.
+
+[Learn more →](/genai/eval-monitor)
+
+![Trace Evaluation](/images/llms/tracing/genai-trace-evaluation.png)
+
+**Production Monitoring**
+
+#### Monitor Applications in Production
+
+Understanding and optimizing LLM application and AI agent performance is crucial for efficient operations. MLflow Tracing captures key metrics like latency and token usage at each step, as well as various quality metrics, helping you identify bottlenecks, monitor efficiency, and find optimization opportunities.
+
+[Learn more →](/genai/tracing/prod-tracing)
+
+![Monitoring](/images/llms/tracing/genai-monitoring.png)
+
+**Dataset Collection**
+
+#### Create a High-Quality Dataset from Real World Traffic
+
+Evaluating the performance of your LLM application or AI agent is crucial, but creating a reliable evaluation dataset is challenging.
+
+Traces from production systems capture perfect data for building high-quality datasets with precise details for internal components like retrievers and tools.
+
+[Learn more →](/genai/datasets/)
+
+![Trace Dataset](/images/llms/tracing/genai-trace-dataset.png)
+
+## One-line Auto Tracing Integrations
+
+MLflow Tracing is integrated with various LLM and AI agent frameworks, such as OpenAI, LangChain, DSPy, Vercel AI, and provides one-line automatic tracing experience for each library (and combinations of them!):
+
+```python
+import mlflow
+
+mlflow.openai.autolog()  # or replace 'openai' with other library names, e.g., "anthropic"
+```
+
+View the full list of supported libraries and detailed setup instructions on the [Integrations](/genai/tracing/integrations) page.
+
+## Flexible and Customizable
+
+In addition to the one-line auto tracing experience, MLflow offers Python SDK for manually instrumenting your code and manipulating traces:
+
+- [Trace a function with `@mlflow.trace` decorator](/genai/tracing/app-instrumentation/manual-tracing#decorator)
+- [Trace any block of code](/genai/tracing/app-instrumentation/manual-tracing#code-block)
+- [Combine multiple auto-tracing integrations](/genai/tracing/app-instrumentation/automatic/#multi-framework-example)
+- [Instrument multi-threaded applications](/genai/tracing/app-instrumentation/manual-tracing#multi-threading)
+- [Native async support](/genai/tracing/app-instrumentation/manual-tracing#async-support)
+- [Group and filter traces using sessions](/genai/tracing/track-users-sessions)
+- [Redact PII data from traces](/genai/tracing/observe-with-traces/masking)
+- [Disable tracing globally](/genai/tracing/app-instrumentation/automatic#disabling-tracing)
+- [Configure sampling ratio to control trace throughput](/genai/tracing/prod-tracing#sampling-traces)
+- [Propagate trace context across services](/genai/tracing/app-instrumentation/distributed-tracing)
+- [Capture and view images and audio in traces](/genai/tracing/observe-with-traces/multimodal)
+
+## Production Readiness
+
+MLflow Tracing is production ready and provides comprehensive monitoring capabilities for your LLM applications and AI agents in production environments. By enabling [async logging](/genai/tracing/prod-tracing/#asynchronous-trace-logging), trace logging is done in the background and does not impact the performance of your application.
+
+For production deployments, it is recommended to use the [Production Tracing SDK](/genai/tracing/lightweight-sdk) (`mlflow-tracing`) that is optimized for reducing the total installation size and minimizing dependencies while maintaining full tracing capabilities. Compared to the full `mlflow` package, the `mlflow-tracing` package requires 95% smaller footprint.
+
+Read [Production Monitoring](/genai/tracing/prod-tracing) for complete guidance on using MLflow Tracing for monitoring models in production and various backend configuration options.

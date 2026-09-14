@@ -1,0 +1,42 @@
+---
+title: Tutorials and Examples
+description: Documento de prueba con frontmatter YAML y separadores.
+sidebar_label: Examples
+keywords: [tutorials, examples]
+date: 2024-01-30
+---
+
+import TilesGrid from "@site/src/components/TilesGrid";
+
+# Tutorials and Examples
+
+Un párrafo de introducción que sobrevive a la limpieza.
+
+---
+
+## Core Workflows
+
+El separador de arriba estaba justo delante de este encabezado: la sección
+anterior se quedaba con `---` como cuerpo entero y salía un chunk de un token.
+
+---
+
+## Instrumenting ML Training Code
+
+Aquí el separador vuelve a aparecer. Dentro de código, en cambio, los guiones
+tienen que sobrevivir:
+
+```yaml
+# Un frontmatter de ejemplo dentro de un bloque de código
+---
+title: no me toques
+---
+...
+```
+
+Y una línea con tres puntos fuera de código tampoco debería quedarse sola como
+sección.
+
+## Cierre
+
+Último párrafo del documento.

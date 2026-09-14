@@ -1,0 +1,112 @@
+---
+title: MLflow Keras 3.0 Integration
+description: Log, track, and deploy Keras 3.0 models with MLflow.
+sidebar_position: 2
+sidebar_label: Keras
+keywords: [keras, autologging, tracking]
+---
+
+import FeatureHighlights from "@site/src/components/FeatureHighlights";
+import TilesGrid from "@site/src/components/TilesGrid";
+import { Zap, BookOpen } from "lucide-react";
+import { APILink } from "@site/src/components/APILink";
+
+# MLflow Keras 3.0 Integration
+
+{/* Este comentario MDX no debe llegar al corpus */}
+
+## Introduction
+
+**Keras 3.0** is a high-level neural networks API that runs on TensorFlow, JAX, and PyTorch backends.
+
+## Why MLflow + Keras?
+
+<FeatureHighlights
+  features={[
+    {
+      icon: Zap,
+      title: "Autologging",
+      description: "Enable tracking with one line: mlflow.tensorflow.autolog().",
+    },
+  ]}
+/>
+
+## Autologging
+
+:::warning
+Autologging requires Keras 3.0 or above.
+:::
+
+Enable it with <APILink fn="mlflow.tensorflow.autolog" />, or take control with
+<APILink fn="mlflow.tensorflow.MlflowCallback">`MlflowCallback`</APILink>:
+
+<TabsWrapper>
+<Tabs>
+  <TabItem value="python" label="Python" default>
+    <div class="flex-column">
+      #### Enable autologging
+
+      Set the tracking URI and let MLflow log the run for you:
+
+      ```python
+      import mlflow
+      from tensorflow import keras
+
+      mlflow.tensorflow.autolog()
+      ```
+
+      - **Metrics**: logged every epoch
+      - **Artifacts**: the serialized model
+    </div>
+  </TabItem>
+  <TabItem value="shell" label="Shell">
+
+```bash
+export MLFLOW_TRACKING_URI="http://localhost:5000"
+export MLFLOW_EXPERIMENT_NAME="keras"
+```
+
+  </TabItem>
+</Tabs>
+</TabsWrapper>
+
+<StepHeader number={3} title="Check the results" />
+
+Open the MLflow UI and compare the runs.
+
+## Supported output types
+
+<Table>
+  <thead>
+    <tr>
+      <th>Pipeline Type</th>
+      <th>Output Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Text Classification</td>
+      <td>pd.DataFrame (dtypes: \{'label': str})</td>
+    </tr>
+    <tr>
+      <td>Translation</td>
+      <td>List[str]</td>
+    </tr>
+  </tbody>
+</Table>
+
+## Learn More
+
+<TilesGrid>
+  <TileCard
+    icon={BookOpen}
+    title="Model Registry"
+    description="Version and manage Keras models"
+    href="/ml/model-registry"
+    text={
+      <>
+        Learn how to optimize your LLM's outputs with MLflow.
+      </>
+    }
+  />
+</TilesGrid>

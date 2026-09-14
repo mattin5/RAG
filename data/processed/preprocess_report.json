@@ -1,0 +1,19 @@
+{
+  "n_documents": 323,
+  "n_skipped": 0,
+  "skipped": [],
+  "total_chars": 2614570,
+  "n_code_blocks": 2142,
+  "with_frontmatter": 225,
+  "trivial_lt_500_chars": 21,
+  "large_gt_20000_chars": 22,
+  "chars": {
+    "min": 142,
+    "p25": 3290,
+    "median": 5780,
+    "p75": 9990,
+    "p95": 20995,
+    "max": 71462,
+    "mean": 8094.6
+  }
+}
