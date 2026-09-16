@@ -18,6 +18,7 @@ import os
 import random
 import time
 from collections import defaultdict
+from src.evaluate.texto import norm
 
 from dotenv import load_dotenv
 from google import genai
@@ -53,16 +54,6 @@ El campo "ancla" debe ser una frase copiada LITERALMENTE del texto, palabra por
 palabra, que contenga la respuesta. No la reformules ni la abrevies."""
 
 
-# --------------------------------------------------------------------------
-# Normalización de texto
-# --------------------------------------------------------------------------
-import re
-
-def norm(s: str) -> str:
-    s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)   # enlaces -> solo el texto
-    s = re.sub(r"[*_`]+", "", s)                      # negrita, cursiva, codigo
-    s = re.sub(r"\s+", " ", s)                        # espacios y saltos
-    return s.strip().lower()
 
 # --------------------------------------------------------------------------
 # Muestreo

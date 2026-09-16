@@ -9,7 +9,7 @@ si su texto normalizado contiene el ancla normalizada. Asi el set sobrevive
 a cualquier cambio de chunking.
 
 Uso:
-    python -m src.evaluate.evaluar_retrieval e5base_512
+    python -m src.evaluate.retrieval_evaluation e5base_512
 """
 
 import argparse
@@ -144,7 +144,9 @@ def main(nombre: str, eval_path: str = EVAL_PATH):
     res["ndcg@10"] = float(np.mean([
         ndcg_at_k(r, g, 10) for r, g in zip(rankings, grupos_por_caso)
     ]))
-
+    # Reemplazamos el '@' por un '_' para que MLflow lo acepte
+    safe_res = {k.replace('@', '_'): v for k, v in res.items()}
+    mlflow.log_metrics(safe_res)
     print()
     for m, v in res.items():
         print(f"{m:<12} {v:.3f}")
@@ -162,6 +164,7 @@ def main(nombre: str, eval_path: str = EVAL_PATH):
 
     # MLflow
     mlflow.set_experiment("rag-retrieval")
+    mlflow.end_run()
     with mlflow.start_run(run_name=f"denso-{nombre}"):
         mlflow.log_params({
             "indice": nombre,
@@ -171,7 +174,7 @@ def main(nombre: str, eval_path: str = EVAL_PATH):
             "n_casos": len(con_ancla),
             **{k: v for k, v in cfg.items() if k != "fecha"},
         })
-        mlflow.log_metrics(res)
+        mlflow.log_metrics(safe_res)
         mlflow.log_artifact(eval_path)
         mlflow.log_artifact(f"{prefijo}_config.json")
 
