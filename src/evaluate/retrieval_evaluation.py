@@ -47,6 +47,19 @@ def relevantes_por_ancla(anclas, textos_norm) -> list[set[int]]:
         out.append({i for i, t in enumerate(textos_norm) if an in t})
     return out
 
+def docs_relevantes(grupos, chunks) -> set[str]:
+    """Documentos a los que pertenecen los chunks que contienen el ancla."""
+    return {chunks[i]["doc_id"] for g in grupos for i in g}
+
+def ranking_docs(ranking, chunks) -> list[str]:
+    """Ranking de documentos: el orden de primera aparicion en el de chunks."""
+    vistos, out = set(), []
+    for idx in ranking:
+        d = chunks[idx]["doc_id"]
+        if d not in vistos:
+            vistos.add(d)
+            out.append(d)
+    return out
 
 # --------------------------------------------------------------------------
 # Metricas
@@ -85,6 +98,18 @@ def ndcg_at_k(ranking, grupos, k) -> float:
     return dcg / idcg if idcg else 0.0
 
 
+def doc_hit_at_k(ranking, grupos, chunks, k) -> float:
+    """¿Algun chunk del top-k pertenece al documento correcto?"""
+    relevantes = docs_relevantes(grupos, chunks)
+    return float(any(chunks[i]["doc_id"] in relevantes for i in ranking[:k]))
+
+
+def doc_mrr(ranking, grupos, chunks) -> float:
+    relevantes = docs_relevantes(grupos, chunks)
+    for pos, d in enumerate(ranking_docs(ranking, chunks), 1):
+        if d in relevantes:
+            return 1.0 / pos
+    return 0.0
 # --------------------------------------------------------------------------
 # Principal
 # --------------------------------------------------------------------------
@@ -138,11 +163,18 @@ def main(nombre: str, eval_path: str = EVAL_PATH):
         res[f"recall@{k}"] = float(np.mean([
             recall_at_k(r, g, k) for r, g in zip(rankings, grupos_por_caso)
         ]))
+        res[f"doc_hit@{k}"] = float(np.mean([
+        doc_hit_at_k(r, g, chunks, k) for r, g in zip(rankings, grupos_por_caso)
+        ]))
     res["mrr"] = float(np.mean([
         mrr(r, g) for r, g in zip(rankings, grupos_por_caso)
     ]))
     res["ndcg@10"] = float(np.mean([
         ndcg_at_k(r, g, 10) for r, g in zip(rankings, grupos_por_caso)
+    ]))
+
+    res["doc_mrr"] = float(np.mean([
+    doc_mrr(r, g, chunks) for r, g in zip(rankings, grupos_por_caso)
     ]))
     # Reemplazamos el '@' por un '_' para que MLflow lo acepte
     safe_res = {k.replace('@', '_'): v for k, v in res.items()}

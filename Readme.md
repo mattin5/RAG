@@ -183,17 +183,143 @@ el sistema encuentra el chunk correcto en 4 de cada 5 preguntas, pero lo coloca
 demasiado abajo en el ranking. Es justo el escenario donde un reranker tiene
 margen para mejorar mucho.
 
-Al mirar las preguntas que peor funcionan me di cuenta de otra cosa: están en
-español y el corpus está en inglés. Sin querer he montado un sistema de
-recuperación cross-lingüe, que es más difícil que buscar en el mismo idioma. El
-siguiente experimento es traducir las preguntas y reevaluar con el mismo
-índice, para medir cuánto de la diferencia se explica por ahí.
+### Acierto a nivel de documento
 
-## 7. Siguientes pasos
+Con las métricas anteriores solo sabía si el chunk exacto aparecía en el top-k,
+pero no si el sistema al menos estaba buscando en el sitio correcto. Así que
+añadí métricas a nivel de documento: un acierto cuenta si alguno de los chunks
+recuperados pertenece al documento que contiene la respuesta. Los documentos
+relevantes los saco de los chunks que contienen el ancla, no del doc_id de la
+pregunta, para que funcione también con las preguntas multisalto.
+
+La idea es separar dos fallos distintos: si acierta el documento pero no el
+chunk, el sistema sabe de qué va la pregunta pero elige otra sección, y eso es
+un problema de chunking; si no acierta ni el documento, el problema es de
+fondo, del modelo o de cómo está formulada la consulta.
+
+| k  | Chunk | Documento |
+|----|-------|-----------|
+| 1  | 0,276 | 0,397     |
+| 3  | 0,414 | 0,500     |
+| 5  | 0,517 | 0,638     |
+| 10 | 0,638 | 0,724     |
+| 20 | 0,793 | 0,793     |
+
+MRR: 0,393 a nivel de chunk y 0,499 a nivel de documento.
+
+El dato más revelador es que en k=20 las dos métricas coinciden. Es decir,
+siempre que el documento correcto aparece entre los 20 primeros, el chunk
+correcto también. No hay ningún caso en el que el sistema llegue al documento y
+se pierda dentro de él, así que el chunking no es lo que está limitando el
+rendimiento.
+
+En los primeros puestos sí hay una diferencia de unos 12 puntos: muchas veces
+el primer resultado es del documento correcto pero de otra sección, y el chunk
+bueno está unos puestos más abajo. Eso es justo lo que arregla un reranker, que
+solo tiene que reordenar lo que ya está en el top-20.
+
+El problema principal era el 21% de preguntas en las que el sistema no llegaba
+ni al documento correcto. Ahí ni el reranker ni el chunking ayudan, porque el
+reranker solo reordena lo que el retriever le pasa.
+
+## 7. Revisión del set de evaluación
+
+Antes de tocar nada del pipeline, me puse a leer las preguntas que peor
+funcionaban para ver si el problema era del sistema o del set. Encontré tres
+causas distintas.
+
+**Términos técnicos destrozados por la traducción.** Las preguntas las generó
+Gemini con un prompt en español, así que las escribió en español aunque leyera
+chunks en inglés, y por el camino tradujo términos que en la documentación
+nunca aparecen traducidos. Una preguntaba por "un intervalo de seguimiento"
+cuando el corpus dice *span*; otra por "anidar el paquete" cuando era
+*install*. Con el término técnico traducido, el anclaje léxico desaparece del
+todo.
+
+**Preguntas vagas.** Cosas del tipo "¿para qué tipo de usuarios está
+recomendada esta sección?" o "¿qué herramientas ofrece la plataforma?". Encajan
+con decenas de chunks, así que no miden el retriever, miden el ruido.
+
+**Ambigüedad del corpus.** Esta es la más interesante. La documentación de
+MLflow describe cada juez de evaluación con la misma estructura, y las páginas
+de integraciones están hechas con plantilla, así que comparten párrafos enteros
+palabra por palabra. Tenía cuatro preguntas casi idénticas sobre cuatro páginas
+casi idénticas. Un humano experto tampoco sabría cuál de ellas le estás
+pidiendo.
+
+Al revisar caso por caso descarté 2 preguntas y reescribí 9. El criterio para
+reescribir fue hacerlas discriminantes: nombrar el detalle que distingue ese
+chunk de sus vecinos (el juez concreto, la integración concreta) pero **sin
+filtrar la respuesta en el enunciado**. En un primer intento puse el nombre del
+juez entre paréntesis en una pregunta cuya respuesta era precisamente ese
+nombre, lo cual habría subido las métricas sin que el sistema mejorase nada.
+
+Las reescrituras las hice sobre los mismos chunks, no muestreando otros nuevos.
+Cambiar de chunks habría sido elegir la muestra en función de lo bien que
+funciona el sistema, que es justo lo que invalida una evaluación.
+
+Para aplicarlo escribí un script que busca los casos por su campo `id` y nunca
+por su posición en la lista (los índices se desplazan al borrar casos, los ids
+no), verifica las anclas nuevas antes de escribir nada y aborta si alguna no
+aparece en ningún chunk. Los casos tocados quedan marcados con
+`"reescrito": true`.
+
+### Anclas en varios documentos
+
+Al verificar las anclas nuevas me encontré con que una aparecía en dos
+documentos distintos. La primera reacción fue desambiguarla, pero al abrir los
+dos vi que ambos responden correctamente la pregunta: son dos páginas que
+documentan el mismo juez. En ese caso tener dos fuentes válidas no es un
+defecto, y las métricas ya lo manejan bien, porque cuentan acierto si el top-k
+contiene algún chunk relevante.
+
+La regla que me quedó: cuando un ancla aparece en varios documentos, hay que
+abrirlos y preguntarse si todos responden. Si sí, se acepta; si uno es la
+respuesta equivocada, hay que desambiguar. En otra pregunta sí tuve que
+hacerlo, porque el ancla que había elegido aparecía tanto en la página de
+LangChain como en la de LangGraph, y la pregunta era específica de LangGraph.
+
+## 8. Baseline con el set revisado
+
+| k  | Chunk | Documento |
+|----|-------|-----------|
+| 1  | 0,339 | 0,500     |
+| 3  | 0,518 | 0,625     |
+| 5  | 0,643 | 0,750     |
+| 10 | 0,750 | 0,857     |
+| 20 | 0,911 | 0,929     |
+
+MRR 0,479, nDCG@10 0,495, MRR a nivel de documento 0,614. 56 preguntas.
+
+**Importante: esta subida no es una mejora del sistema.** El índice, el modelo
+y el chunking son exactamente los mismos que antes; lo único que ha cambiado es
+el instrumento de medida. Borrar preguntas que fallaban y hacer el resto más
+precisas sube las métricas por construcción. Los dos números no son
+comparables, y el baseline válido de aquí en adelante es este.
+
+Lo que sí dice algo es el Recall@20, que pasa de 0,793 a 0,911. Ese número es
+el techo del sistema: antes había 12 preguntas que el retriever no alcanzaba de
+ninguna manera y ahora son 5. Como el retriever no ha cambiado, esas 7
+preguntas recuperadas estaban mal formuladas, no eran fallos del sistema.
+
+También aparece por primera vez una diferencia entre chunk y documento en k=20:
+0,911 frente a 0,929. Hay exactamente un caso en el que el sistema encuentra el
+documento correcto pero no el chunk con el ancla. Es el primer fallo de
+chunking real que sale, probablemente un ancla que cae en la frontera entre dos
+fragmentos.
+
+El margen sigue estando donde estaba: 27 puntos entre Recall@5 y Recall@20. El
+chunk correcto está ahí, solo que mal colocado, que es exactamente lo que
+arregla un reranker.
+
+Una limitación que conviene dejar dicha: al hacer las preguntas más
+discriminantes, el set mide recuperación con consultas bien formuladas, no
+robustez ante consultas vagas. Medir lo segundo sería otro set de preguntas
+deliberadamente imprecisas, y es un experimento aparte.
+## 9. Siguientes pasos
 
 - Reevaluar con las preguntas traducidas al inglés y comparar con el set en
   español.
-- Limpiar del set las preguntas demasiado vagas o autorreferenciales.
 - Búsqueda híbrida: añadir BM25 en paralelo y fusionar los dos rankings con
   Reciprocal Rank Fusion.
 - Reranker con cross-encoder sobre el top-50.

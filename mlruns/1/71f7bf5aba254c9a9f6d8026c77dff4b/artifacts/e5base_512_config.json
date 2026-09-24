@@ -1,0 +1,9 @@
+{
+  "modelo": "intfloat/multilingual-e5-base",
+  "prefijo_doc": "passage: ",
+  "dimension": 768,
+  "n_chunks": 2013,
+  "chunks_path": "data/processed/chunks.jsonl",
+  "normalizado": true,
+  "fecha": "2026-09-14"
+}
