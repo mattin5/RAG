@@ -4,6 +4,7 @@ Evaluacion del retrieval: baseline denso.
 Calcula Recall@k, MRR y nDCG sobre el set de evaluacion y registra el run
 en MLflow.
 
+
 La relevancia se decide por el ANCLA, no por chunk_id: un chunk es relevante
 si su texto normalizado contiene el ancla normalizada. Asi el set sobrevive
 a cualquier cambio de chunking.
@@ -22,7 +23,9 @@ from sentence_transformers import SentenceTransformer
 
 from src.evaluate.texto import norm   # la MISMA norm que uso el generador
 
-EVAL_PATH = "eval/eval_set_borrador.jsonl"
+from src.retrieve.busqueda import buscar_denso, buscar_bm25, buscar_hibrido, construir_bm25
+
+EVAL_PATH = "eval/eval_set_en.jsonl"
 DIR = "data/processed"
 PREFIJO_QUERY = "query: "
 KS = (1, 3, 5, 10, 20)
@@ -114,7 +117,7 @@ def doc_mrr(ranking, grupos, chunks) -> float:
 # Principal
 # --------------------------------------------------------------------------
 
-def main(nombre: str, eval_path: str = EVAL_PATH):
+def main(nombre: str, eval_path: str = EVAL_PATH, metodo: str = "denso"):
     prefijo = os.path.join(DIR, nombre)
     emb = np.load(f"{prefijo}.npy")
     ids = json.load(open(f"{prefijo}_ids.json", encoding="utf-8"))
@@ -144,16 +147,18 @@ def main(nombre: str, eval_path: str = EVAL_PATH):
         print(f"\nAVISO: {len(huerfanos)} casos sin ningun chunk relevante "
               f"(imposibles de acertar): {huerfanos[:10]}")
 
-    # Busqueda: una sola multiplicacion para todas las preguntas
+    # La búsqueda depende del método:
     model = SentenceTransformer(cfg["modelo"])
-    Q = model.encode(
-        [PREFIJO_QUERY + c["pregunta"] for c in con_ancla],
-        normalize_embeddings=True,
-        convert_to_numpy=True,
-    )
-    sims = Q @ emb.T                            # (n_preguntas, n_chunks)
-    rankings = np.argsort(-sims, axis=1)[:, :max(KS)]
+    preguntas = [c["pregunta"] for c in con_ancla]
 
+    if metodo == "denso":
+        rankings = buscar_denso(preguntas, emb, model, k=max(KS))
+    elif metodo == "bm25":
+        rankings = buscar_bm25(preguntas, construir_bm25(chunks), k=max(KS))
+    elif metodo == "hibrido":
+        rankings = buscar_hibrido(preguntas, emb, model, construir_bm25(chunks), k=max(KS))
+    else:
+        raise SystemExit(f"metodo desconocido: {metodo}")
     # Agregacion
     res = {}
     for k in KS:
@@ -196,13 +201,14 @@ def main(nombre: str, eval_path: str = EVAL_PATH):
 
     # MLflow
     mlflow.set_experiment("rag-retrieval")
-    mlflow.end_run()
-    with mlflow.start_run(run_name=f"denso-{nombre}"):
+    if mlflow.active_run():
+            mlflow.end_run()
+    with mlflow.start_run(run_name=f"{metodo}-{nombre}"):
         mlflow.log_params({
             "indice": nombre,
-            "metodo": "denso",
+            "metodo": metodo,
             "reranker": "no",
-            "hibrido": "no",
+            "eval_set": os.path.basename(eval_path),
             "n_casos": len(con_ancla),
             **{k: v for k, v in cfg.items() if k != "fecha"},
         })
@@ -217,5 +223,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("nombre", help="prefijo del indice, p.ej. e5base_512")
     ap.add_argument("--eval", default=EVAL_PATH)
+    ap.add_argument("--metodo", default="denso", choices=["denso", "bm25", "hibrido"])
     a = ap.parse_args()
-    main(a.nombre, a.eval)
+    main(a.nombre, a.eval, a.metodo)

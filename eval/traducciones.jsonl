@@ -1,0 +1,56 @@
+{"pregunta": "What prerequisite must be met if I want to run the notebooks in this guide in my own environment?", "id": "q001"}
+{"pregunta": "How does MLflow detect the task type when saving a Transformers pipeline natively?", "id": "q002"}
+{"pregunta": "Which section of the interface should I click if the assistant panel does not open automatically?", "id": "q003"}
+{"pregunta": "Which Python libraries must be installed to use TruLens scorers?", "id": "q004"}
+{"pregunta": "What is the minimum number of human-evaluated traces required for the alignment process to work?", "id": "q005"}
+{"pregunta": "What is the minimum number of traces needed to calibrate an evaluation judge?", "id": "q006"}
+{"pregunta": "Which version of the tool introduced the capability to serialize and deploy custom models via script serialization?", "id": "q007"}
+{"pregunta": "Which library is used to automatically instrument a FastAPI application and capture its traces?", "id": "q008"}
+{"pregunta": "Which argument should be added at the start of a run to log system metrics regardless of the global configuration?", "id": "q009"}
+{"pregunta": "How is persistent storage enabled for SQLite or local artifacts in Helm configuration values?", "id": "q010"}
+{"pregunta": "What value must be assigned to the environment variable defining the OTLP protocol to work properly with the platform?", "id": "q011"}
+{"pregunta": "What are the two available options for deploying a model to Amazon SageMaker?", "id": "q012"}
+{"pregunta": "How can real-time inferences be performed using the CLI for a model hosted on Modal?", "id": "q013"}
+{"pregunta": "Which command must be executed to start the containers in the background?", "id": "q014"}
+{"pregunta": "What is the name of the built-in MLflow judge that evaluates whether the generated response directly addresses the user input without deviating into unrelated topics?", "id": "q015"}
+{"pregunta": "Which DeepEval metric evaluates whether the agent retains information across turns?", "id": "q016"}
+{"pregunta": "Which Java version should be configured in the properties file to integrate tracing with Spring AI?", "id": "q017"}
+{"pregunta": "What steps should I follow in the admin interface to grant management privileges to Alice in her workspace?", "id": "q018"}
+{"pregunta": "If I already use the transformers library, which section of the MLflow documentation helps me get started with tracking and inference?", "id": "q019"}
+{"pregunta": "How is fairness ensured when evaluating two different application variants?", "id": "q020"}
+{"pregunta": "Which language model does the platform use by default when running evaluations outside the Databricks ecosystem?", "id": "q021"}
+{"pregunta": "Which npm command must be executed to instrument a JavaScript application using FireworksAI with MLflow?", "id": "q022"}
+{"pregunta": "What value does the MLflow Correctness judge assign to the value field of the Feedback object when the response is correct?", "id": "q023"}
+{"pregunta": "At which local URL can traces be viewed after defining and invoking a LangGraph agent in MLflow?", "id": "q024"}
+{"pregunta": "How can AI provider credentials be updated directly without causing service disruptions?", "id": "q025"}
+{"pregunta": "What capabilities does MLflow offer for deep learning workflows using frameworks like PyTorch or TensorFlow?", "id": "q026"}
+{"pregunta": "What happens when hovering over the submit button when a required prerequisite is missing?", "id": "q028"}
+{"pregunta": "Which command runs a local MLflow instance with demo data?", "id": "q029"}
+{"pregunta": "Which built-in MLflow judge is used in RAG systems to evaluate whether the retrieved documents contain all necessary information?", "id": "q030"}
+{"pregunta": "Which libraries must be installed via pip to perform agent optimization?", "id": "q031"}
+{"pregunta": "How many popular LLM and AI agent libraries and frameworks is MLflow Tracing integrated with?", "id": "q032"}
+{"pregunta": "How should data be logged when training a large number of models in batch to reduce tracking server load?", "id": "q033"}
+{"pregunta": "Which method should be used to register the custom agent instance within an MLflow script?", "id": "q034"}
+{"pregunta": "How are previously collected traces merged into the dataset?", "id": "q035"}
+{"pregunta": "Which command must be run to start the MLflow server once the environment variables for OIDC are configured?", "id": "q036"}
+{"pregunta": "Which Jupyter Notebook magic command allows saving code from a cell directly to a file without leaving the environment?", "id": "q037"}
+{"pregunta": "Which tool is used alongside MLflow in the tutorial to run large-scale hyperparameter tuning?", "id": "q038"}
+{"pregunta": "Which HTTP header must be included to send traces to the tracking server and what value should it contain?", "id": "q039"}
+{"pregunta": "Which resource usage and cost metrics are recorded when inspecting a single trace detail?", "id": "q040"}
+{"pregunta": "Where can I ask questions and receive support from other users of the platform?", "id": "q041"}
+{"pregunta": "How do you log input data to a span in MLflow Tracing?", "id": "q042"}
+{"pregunta": "Which function must be executed beforehand in the code so the system automatically logs training data without manual instructions?", "id": "q043"}
+{"pregunta": "How can user and session metadata be associated with an active trace using TypeScript?", "id": "q044"}
+{"pregunta": "What are the initial steps to add a new endpoint in the interface?", "id": "q045"}
+{"pregunta": "Which Python package manager allows starting a server by executing a single command without prior installation?", "id": "q046"}
+{"pregunta": "How does MLflow discover the different available workspace providers?", "id": "q047"}
+{"pregunta": "Which MLflow function should be used to obtain the tracing context headers required when making an HTTP request from an active span?", "id": "q048"}
+{"pregunta": "Which method is recommended for collecting human feedback when prior labels are not available?", "id": "q049"}
+{"pregunta": "Which type of MLflow plugin is used to implement custom test suites or domain-specific validations?", "id": "q050"}
+{"pregunta": "Which command must be run in the terminal to launch the tracking server and view the graphical interface?", "id": "q051"}
+{"pregunta": "What value does the MLflow ToolCallEfficiency judge return in the value field if the tool calls are efficient?", "id": "q052"}
+{"pregunta": "Where can the inputs, outputs, and token usage of Hermes requests processed by the gateway be reviewed?", "id": "q053"}
+{"pregunta": "Which conversion library should be used to export a fitted Apache Spark pipeline to ONNX format within an MLflow run?", "id": "q054"}
+{"pregunta": "What default log level is assigned to agent operations?", "id": "q056"}
+{"pregunta": "Which environment variable must be set to enable trace logging in evaluation functions?", "id": "q057"}
+{"pregunta": "Which Python function allows adding tags to a trace while it is executing?", "id": "q058"}

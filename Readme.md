@@ -316,10 +316,147 @@ Una limitación que conviene dejar dicha: al hacer las preguntas más
 discriminantes, el set mide recuperación con consultas bien formuladas, no
 robustez ante consultas vagas. Medir lo segundo sería otro set de preguntas
 deliberadamente imprecisas, y es un experimento aparte.
-## 9. Siguientes pasos
 
-- Reevaluar con las preguntas traducidas al inglés y comparar con el set en
-  español.
+## 9. Traducción del set: recuperación cross-lingüe
+
+Como he mencionado en un apartado anterior, había montado un
+sistema de recuperación cross-lingüe, que es más difícil que buscar en el
+mismo idioma: el modelo tiene que salvar el salto entre idiomas además de
+entender la pregunta.
+
+Antes de tocar nada del pipeline quise medir cuánto costaba eso y cuánto rendimiento estaba perdiendo. Traduje las 56 preguntas al inglés y reevalué con el mismo índice y las mismas anclas, de
+modo que lo único que cambia entre las dos corridas es el idioma de la
+consulta.
+
+Dos detalles al traducir. Primero, traduje **solo el campo `pregunta`**: las
+anclas son texto literal del corpus, ya están en inglés y no se tocan. Segundo,
+en el prompt insistí en que no tradujera los términos técnicos (*span*,
+*trace*, *judge*, nombres de clases, comandos), porque traducirlos fue
+precisamente uno de los problemas que había detectado en el set original.
+
+También aprendí algo por el camino: le pedí a Gemini que devolviera el JSONL
+completo y el fichero resultante no se podía parsear, porque las anclas
+contienen comillas dobles y el modelo no las escapaba. La solución fue que el
+modelo devuelva únicamente la traducción de cada pregunta y que el fichero lo
+construya Python con `json.dumps`, copiando el resto de campos del original. Es
+más robusto y además garantiza que las anclas no pasan nunca por el modelo.
+
+### Resultados
+
+| Métrica   | Español | Inglés | Δ     |
+|-----------|---------|--------|-------|
+| Recall@1  | 0,339   | 0,464  | +12,5 |
+| Recall@5  | 0,643   | 0,786  | +14,3 |
+| Recall@10 | 0,750   | 0,911  | +16,1 |
+| Recall@20 | 0,911   | 0,929  | +1,8  |
+| MRR       | 0,479   | 0,596  | +11,7 |
+
+A nivel de documento, con las preguntas en inglés: 0,571 en k=1, 0,857 en k=5
+y 0,982 en k=10 y k=20. MRR de documento 0,708.
+
+Lo interesante no es que mejore, sino **dónde** mejora. El Recall@20 apenas se
+mueve (una sola pregunta), mientras que el Recall@5 sube 14 puntos y el
+Recall@10 sube 16. Es decir, el cruce de idiomas no impedía encontrar el chunk
+correcto: lo empujaba hacia abajo en el ranking. El modelo multilingüe sí
+conecta una pregunta en español con un documento en inglés, pero con menos
+confianza, así que el fragmento bueno acababa en la posición 8 en vez de en la
+3.
+
+Resumido en una frase: en este corpus, la recuperación cross-lingüe cuesta unos
+14 puntos de Recall@5 pero casi nada de Recall@20.
+
+### Qué queda
+
+Con las preguntas en inglés, `doc_hit@20` es 0,982: solo hay una pregunta en la
+que el sistema no llega ni al documento correcto. Es el único fallo de fondo
+que queda por entender.
+
+El `hit@20` es 0,929, cuatro puntos por debajo. Esa diferencia son 3 preguntas
+en las que el documento correcto sí aparece pero el chunk que contiene el ancla
+no. Ese sí es un límite del chunking, y es la primera vez que se puede medir.
+
+El margen para un reranker se ha reducido: la brecha entre Recall@5 y Recall@20
+ha pasado de 27 puntos a 14. Sigue habiendo recorrido, pero menos, lo cual
+significa que el retriever ya coloca razonablemente bien.
+
+## 10. Búsqueda híbrida: BM25 + denso con RRF
+
+La búsqueda densa capta significado pero se pierde con identificadores exactos;
+BM25 hace lo contrario. Como la documentación de MLflow está llena de nombres
+de funciones y clases, tenía sentido probar las dos y fusionarlas.
+
+**Tokenización.** BM25 compara tokens, así que cómo se parte el texto cambia
+mucho el resultado. Uso `[a-z0-9_]+` en minúsculas, lo que parte por puntos y
+paréntesis pero conserva los guiones bajos: `span.set_inputs()` produce los
+tokens `span` y `set_inputs`, de modo que una pregunta que mencione
+`set_inputs` casa aunque no escriba la llamada entera. Es una hipótesis, no una
+verdad, y se puede medir contra otras tokenizaciones.
+
+**Qué se indexa.** El campo `text`, no `embed_text`. El breadcrumb ayuda al
+embedding pero en BM25 solo repite los mismos términos en todos los chunks de
+un documento, desplazando las frecuencias sin aportar señal.
+
+**Fusión.** Reciprocal Rank Fusion con k=60:
+
+    score(d) = Σ_i  1 / (k + rank_i(d))
+
+Usa solo las posiciones, no las puntuaciones, así que no hay que calibrar
+escalas entre un buscador que devuelve cosenos entre 0 y 1 y otro que devuelve
+puntuaciones BM25 sin acotar. Cada buscador aporta 100 candidatos antes de
+fusionar, más profundo que el k final, para que un chunk que esté en la
+posición 40 de uno y la 3 del otro pueda subir al top-5.
+
+### Resultados
+
+| Métrica   | Denso | BM25  | Híbrido |
+|-----------|-------|-------|---------|
+| Recall@1  | 0,464 | 0,482 | 0,607   |
+| Recall@3  | 0,661 | 0,696 | 0,804   |
+| Recall@5  | 0,786 | 0,786 | 0,893   |
+| Recall@10 | 0,911 | 0,839 | 0,946   |
+| Recall@20 | 0,929 | 0,893 | 0,964   |
+| MRR       | 0,596 | 0,605 | 0,728   |
+| nDCG@10   | 0,628 | 0,621 | 0,741   |
+
+A nivel de documento, el híbrido llega a 0,929 en k=3 y 0,982 en k=20.
+
+Lo primero que llama la atención es que **BM25 por sí solo compite con el
+modelo neuronal**, y de hecho lo supera en las primeras posiciones. Tiene
+sentido: el corpus está lleno de identificadores y las preguntas, después de la
+revisión, contienen esos términos exactos. Es el escenario donde la
+coincidencia léxica gana. BM25 se queda corto en profundidad, a partir de k=10,
+porque no puede encontrar lo que no comparte vocabulario con la pregunta.
+
+Lo segundo es que **el híbrido supera a los dos en todos los k**, y por unos 12
+puntos. Eso solo pasa si los dos buscadores fallan en preguntas distintas: si
+fallaran en las mismas, la fusión daría aproximadamente el mejor de los dos.
+Se ve en los casos concretos. Hay tres preguntas que BM25 no encuentra ni en el
+top-20 y que el híbrido recupera a las posiciones 9, 7 y 5, rescatadas por la
+parte densa.
+
+### Lo que queda
+
+Con Recall@20 en 0,964 solo hay 2 preguntas de 56 que el sistema no alcanza, y
+las dos fallan igual en BM25 y en el híbrido. Tienen algo en común: sus anclas
+son muy cortas y están dentro de bloques de código o de viñetas
+(`set_model(agent)`, `- Token counts and cost breakdown.`). Antes de culpar al
+retriever conviene revisar si el problema es el ancla elegida.
+
+El margen para un reranker se ha reducido mucho: la brecha entre Recall@5
+(0,893) y Recall@20 (0,964) es de 7 puntos, cuando en el baseline inicial era
+de 27. Sigue mereciendo la pena probarlo, pero el recorrido es bastante menor.
+
+### Evolución hasta aquí
+
+| Configuración                    | Recall@5 | MRR   |
+|----------------------------------|----------|-------|
+| Denso, preguntas en español      | 0,643    | 0,479 |
+| Denso, preguntas en inglés       | 0,786    | 0,596 |
+| BM25, preguntas en inglés        | 0,786    | 0,605 |
+| Híbrido (RRF), preguntas inglés  | 0,893    | 0,728 |
+
+## 11. Siguientes pasos
+
 - Búsqueda híbrida: añadir BM25 en paralelo y fusionar los dos rankings con
   Reciprocal Rank Fusion.
 - Reranker con cross-encoder sobre el top-50.
